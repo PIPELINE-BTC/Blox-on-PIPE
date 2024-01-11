@@ -1,0 +1,406 @@
+<!-- BASED ON THE BENNY MINTER SCRIPT -->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>PIPEBLOCK MINTER EXAMPLE</title>
+
+  <script src="crypto-utils.1.5.11.js"></script>
+  <script src="tapscript.1.4.4.js"></script>
+  <script> const { Address, Script, Signer, Tap, Tx } = window.tapscript </script>
+</head>
+
+<body>
+  <form>
+    <h2>PIPEBLOCK MINTER EXAMPLE - USE AT YOUR OWN RISK, NO REFUND,</h2>
+    <hr />
+    <label for="pbnumber">PIPEBLOCK NUMBER</label>
+    <input type="text" id="pbnumber" value="0" placeholder="only number" />
+    <br />
+    <br />
+    <label for="the_id">ID</label>
+    <input type="text" id="the_id" value="0" placeholder="the ticker id from 0 - 999999" />
+    <br />
+    <br />
+    <label for="supply">Supply/Size</label>
+    <input type="text" id="supply" value="0" placeholder="Size of the PIPEBLOCK" />
+    <br />
+    <br />
+    <label for="receiver">Receiver</label>
+    <input type="text" id="receiver" value="" placeholder="taproot address to send the PIPEBLOCK" />
+    <br />
+    Only taproot addresses supported at this point.
+    <br />
+    <br />
+    <label for="tx_fee">TX Fee (must include 546 sats to send the token)</label>
+    <input type="text" id="tx_fee" value="" placeholder="sats to pay the fee. must include 546 sats" />
+    <br />
+    <br />
+
+    <div id="sendto" style="display: none; color: red;"></div>
+
+    <input type="text" id="vout" style="display:none;width:20px;margin-top:15px;" value="" placeholder="vout 0 or 1" />
+    <input type="text" id="tx" style="display:none;width:200px;margin-top:15px;" value=""
+      placeholder="Enter TX Hash from funding" />
+
+    <button style="margin-top: 15px;" id="mint" type="button">
+      Generate
+    </button>
+
+    <button style="margin-top: 15px;display:none;" id="create_tx" type="button" disabled="disabled">
+      Create RAW TX to Mint
+    </button>
+
+    <input style="margin-top: 15px;" type="reset" value="Reset" />
+
+  </form>
+
+  <script>
+
+    // Once confirmed, paste your resulting raw transaction here to trigger the actual deploy, mint or transfer transactions:
+    // https://mempool.space/tx/push
+
+    document.getElementById('mint').onclick = async function () {
+
+      const _pbNumber = parseInt(document.getElementById('pbnumber').value.trim());
+      if (_pbNumber < 0 || isNaN(_pbNumber) || _pbNumber > Number.MAX_SAFE_INTEGER) {
+        alert("Invalid PIPEBLOCK Number. Should be a non-negative integer min 0 and max 9007199254740991.");
+        return;
+      }
+
+      if (document.getElementById('receiver').value.trim() === '') {
+        alert('Please enter a receiver address. A receiver is also required for deployments.');
+        return;
+      }
+
+      const _id = parseInt(document.getElementById('the_id').value.trim());
+      if (_id < 0 || isNaN(_id) || _id > 999999) {
+        alert("Invalid ID. Should be a non-negative integer min 0 max 999999.");
+        return;
+      }
+
+      const _supply = BigInt(document.getElementById('supply').value.trim());
+      if (_supply <= 0n) {
+        alert("Invalid Total Supply. Please enter a non-negative integer.");
+        return;
+      }
+
+      const _ticker = 'BLOXP' + encodeBase26(_pbNumber);
+
+      let pair = null;
+      pair = createKeyPair();
+
+      mintPB(
+        _ticker,
+        _id,
+        _supply,
+        document.getElementById('receiver').value.trim(),
+        '',
+        0,
+        parseInt(document.getElementById('tx_fee').value.trim()),
+        pair.seckey,
+        pair.pubkey,
+      )
+    }
+
+    function createKeyPair(pk = '') {
+      let privkey
+
+      if (pk !== '') {
+        privkey = pk
+      }
+      else {
+        privkey = bytesToHex(cryptoUtils.Noble.utils.randomPrivateKey())
+      }
+
+      const KeyPair = cryptoUtils.KeyPair
+      const seckey = new KeyPair(privkey)
+      const pubkey = seckey.pub.rawX
+
+      return { seckey: seckey, pubkey: pubkey }
+    }
+
+    async function mintPB(
+      SYMBOL, ID, MAX, RECEIVER, TX, VOUT, PVALUE, seckey, pubkey) {
+      const RVALUE = 546;
+      const network = 'main';
+      const ec = new TextEncoder()
+
+      const [tseckey] = Tap.getSecKey(seckey.buff);
+      const [tpubkey] = Tap.getPubKey(pubkey);
+
+      const toAddress = Address.p2tr.decode(RECEIVER, network).hex;
+
+      document.getElementById('tx').onchange = function () {
+        if (this.value.trim() !== '') {
+          document.getElementById('create_tx').disabled = false;
+        }
+        else {
+          document.getElementById('create_tx').disabled = true;
+        }
+      };
+
+      script = [
+        pubkey,
+        'OP_CHECKSIG',
+        'OP_0',
+        'OP_IF',
+        ec.encode('P'),
+        ec.encode('A'),
+        ec.encode('I'),
+        ec.encode('_'),
+        ec.encode('P'),
+        ec.encode('N'),
+        toBytes(BigInt(0)),
+        toBytes(BigInt(0)),
+        ec.encode('B'),
+        toBytes(BigInt(1)),
+        '01',
+        'OP_ENDIF'
+      ];
+
+      const leaf = await Tap.tree.getLeaf(Script.encode(script));
+      const [tapkey, cblock] = await Tap.getPubKey(pubkey, { target: leaf });
+
+      let tap_address = Address.p2tr.encode(tapkey, network);
+      document.getElementById('tx').style.display = 'inline';
+      document.getElementById('vout').style.display = 'inline';
+      document.getElementById('sendto').style.display = 'block';
+      document.getElementById('sendto').innerHTML = '';
+      document.getElementById('sendto').innerHTML = "Send exactly (OR FUND WILL BE LOST) " + satsToBTC(PVALUE) + " BTC to address: " + tap_address +
+        "<hr/>After sending the funds, copy and paste its tx id below. If the resulting TX HEX cannot be pushed on https://mempool.space/tx/push, try a different vout (0 or 1)";
+      console.log('Send exactly ' + PVALUE + ' sats to address:', tap_address)
+
+      document.getElementById('create_tx').style.display = 'inline';
+      document.getElementById('create_tx').onclick = async function () {
+
+        if (document.getElementById('tx').value.trim() === '') {
+          alert('Please enter the TX hash for the funding transaction above first');
+          return;
+        }
+
+        let vout = [{
+          value: RVALUE,
+          scriptPubKey: ['OP_1', toAddress]
+        },
+        {
+          scriptPubKey: ['OP_RETURN', ec.encode('P'), ec.encode('D'), toBytes(toInt26(SYMBOL)), toBytes(BigInt(ID)), toBytes(0n), toBytes(BigInt(8)), textToHex('' + MAX), textToHex('' + MAX)]
+        }
+        ];
+
+        const txdata = Tx.create({
+          vin: [{
+            txid: document.getElementById('tx').value.trim(),
+            vout: document.getElementById('vout').value.trim() === '' ? 0 : parseInt(document.getElementById('vout').value.trim()),
+            prevout: {
+              value: PVALUE,
+              scriptPubKey: ['OP_1', tapkey]
+            },
+          }],
+          vout: vout
+        });
+
+        const sig = await Signer.taproot.sign(seckey.raw, txdata, 0, { extension: leaf });
+        txdata.vin[0].witness = [sig, script, cblock];
+
+        await Signer.taproot.verify(txdata, 0, { pubkey: pubkey, throws: true });
+
+        document.getElementById('sendto').innerHTML += '<hr/>Your Mint RAW TX<br/><br/>' + Tx.encode(txdata).hex + '<br><br>copy-paste it <a href="https://mempool.space/tx/push" target="_blank">here</a><br/><br/>';
+        console.log('Your DEPLOY txhex:', Tx.encode(txdata).hex)
+
+        document.getElementById('create_tx').style.display = 'none';
+      }
+    }
+
+    function satsToBTC(sats) {
+      return sats / 100000000;
+    }
+
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    function encodeBase26(num) {
+      if (num === 0) return "A";
+      let result = "";
+      while (num > 0) {
+        const remainder = num % 26;
+        result = alphabet[remainder] + result;
+        num = Math.floor(num / 26);
+      }
+      return result;
+    }
+
+    function decodeBase26(str) {
+      let result = 0;
+      for (let i = 0; i < str.length; i++) {
+        const charIndex = alphabet.indexOf(str[i]);
+        if (charIndex === -1) {
+          return null;
+        }
+        result = result * 26 + charIndex;
+      }
+      return result;
+    }
+
+    function bitLength(number) {
+      if (typeof number !== 'bigint') {
+        throw new Error("Input must be a BigInt");
+      }
+      return number === 0n ? 0 : number.toString(2).length;
+    }
+
+    function byteLength(number) {
+      if (typeof number !== 'bigint') {
+        throw new Error("Input must be a BigInt");
+      }
+      return Math.ceil(bitLength(number) / 8);
+    }
+
+    function toBytes(number) {
+      if (typeof number !== 'bigint') {
+        throw new Error("Input must be a BigInt");
+      }
+
+      if (number < 0n) {
+        throw new Error("BigInt must be non-negative");
+      }
+
+      if (number === 0n) {
+        return new Uint8Array().buffer;
+      }
+
+      const size = byteLength(number);
+      const bytes = new Uint8Array(size);
+      let x = number;
+      for (let i = size - 1; i >= 0; i--) {
+        bytes[i] = Number(x & 0xFFn);
+        x >>= 8n;
+      }
+
+      return bytes.buffer;
+    }
+
+    function bytesToHex(bytes) {
+      return bytes.reduce((str, byte) => str + byte.toString(16).padStart(2, "0"), "");
+    }
+
+    function textToHex(text) {
+      var encoder = new TextEncoder().encode(text);
+      return [...new Uint8Array(encoder)]
+        .map(x => x.toString(16).padStart(2, "0"))
+        .join("");
+    }
+
+    function hexToBytes(hex) {
+      return Uint8Array.from(hex.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)));
+    }
+
+    async function getAsByteArray(file) {
+      return new Uint8Array(await readFile(file))
+    }
+
+    function toString26(num) {
+      var alpha = charRange('a', 'z');
+      var result = '';
+
+      // no letters for 0 or less
+      if (num < 1) {
+        return result;
+      }
+
+      var quotient = num,
+        remainder;
+
+      // until we have a 0 quotient
+      while (quotient !== 0n) {
+        // compensate for 0 based array
+        var decremented = quotient - 1n;
+
+        // divide by 26
+        quotient = decremented / 26n;
+
+        // get remainder
+        remainder = decremented % 26n;
+
+        // prepend the letter at index of remainder
+        result = alpha[remainder] + result;
+      }
+
+      return result;
+    }
+
+    function toInt26(str) {
+      var alpha = charRange('a', 'z');
+      var result = 0n;
+
+      // make sure we have a usable string
+      str = str.toLowerCase();
+      str = str.replace(/[^a-z]/g, '');
+
+      // we're incrementing j and decrementing i
+      var j = 0n;
+      for (var i = str.length - 1; i > -1; i--) {
+        // get letters in reverse
+        var char = str[i];
+
+        // get index in alpha and compensate for
+        // 0 based array
+        var position = BigInt('' + alpha.indexOf(char));
+        position++;
+
+        // the power kinda like the 10's or 100's
+        // etc... position of the letter
+        // when j is 0 it's 1s
+        // when j is 1 it's 10s
+        // etc...
+        const pow = (base, exponent) => base ** exponent;
+
+        var power = pow(26n, j)
+
+        // add the power and index to result
+        result += power * position;
+        j++;
+      }
+
+      return result;
+    }
+
+    function charRange(start, stop) {
+      var result = [];
+
+      // get all chars from starting char
+      // to ending char
+      var i = start.charCodeAt(0),
+        last = stop.charCodeAt(0) + 1;
+      for (i; i < last; i++) {
+        result.push(String.fromCharCode(i));
+      }
+
+      return result;
+    }
+
+    function encodeBase64(file) {
+      return new Promise(function (resolve, reject) {
+        let imgReader = new FileReader();
+        imgReader.onloadend = function () {
+          resolve(imgReader.result.toString());
+        }
+        imgReader.readAsDataURL(file);
+      });
+    }
+
+    function base64ToHex(str) {
+      const raw = atob(str);
+      let result = '';
+      for (let i = 0; i < raw.length; i++) {
+        const hex = raw.charCodeAt(i).toString(16);
+        result += (hex.length === 2 ? hex : '0' + hex);
+      }
+      return result.toLowerCase();
+    }
+
+  </script>
+
+</body>
+
+</html>
