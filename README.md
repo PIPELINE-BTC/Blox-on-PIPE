@@ -1,6 +1,6 @@
 # BLOX Meta Protocol on PIPE
 
-This module is in the experimental phase, use it with caution. No modifications to the core of the PIPE indexer have been made. Blox sits as an additional validation layer on top of the PIPE protocol indexing, allowing for additional validations/indexing on the data. Additional data is stored in a separate database, and no data from the PIPE indexer is altered, thus respecting the PIPE protocol specifications.
+This module is in the experimental phase, use it with caution. No modifications to the core of the PIPE indexer have been made. Blox sits as an additional validation layer on top of the PIPE protocol indexing, allowing for additional validations/indexing on the data. Additional data is stored in a separate database, and no data from the PIPE indexer is altered, thus respecting the [PIPE protocol specifications](https://github.com/BennyTheDev/pipe-specs).
 
 ## How it Works
 
