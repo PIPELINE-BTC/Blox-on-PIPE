@@ -189,7 +189,7 @@ var Blox = /** @class */ (function () {
                         }
                         decodedBlockHRaw = this.decodeBase26(blockHeight);
                         if (decodedBlockHRaw === null) {
-                            throw "decodedBlockHRaw";
+                            // throw "decodedBlockHRaw";
                             return [2 /*return*/];
                         }
                         currentB = this.currentBlock;

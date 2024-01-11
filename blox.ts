@@ -33,7 +33,7 @@ export class Blox {
     }).toArray();
 
     this.blocks = blocksRaw;
-    const blocksHeight = blocksRaw.filter((b) => b.t !== undefined).map((b) =>
+    const blocksHeight = blocksRaw.filter((b: any) => b.t !== undefined).map((b: any) =>
       b.b
     );
     this.blocksToken = new Set(blocksHeight);
@@ -113,7 +113,7 @@ export class Blox {
 
       const decodedBlockHRaw = this.decodeBase26(blockHeight);
       if (decodedBlockHRaw === null) {
-        throw "decodedBlockHRaw";
+        // throw "decodedBlockHRaw";
         return;
       }
 
@@ -146,7 +146,7 @@ export class Blox {
       let blockSize = Long.fromString(blockData[0].size.toString());
       blockSize = blockSize.multiply(Long.fromString('100000000')); // DEC 8
 
-      if(blockSize.equals(0)){
+      if (blockSize.equals(0)) {
         blockSize = Long.fromInt(100000000);
       }
 
@@ -157,7 +157,7 @@ export class Blox {
 
       await this.safeDatabaseOperation(() =>
         this.pipeBlocks.updateOne({ _id: blockData[0]._id }, {
-          $set: { t: blockRaw, tid: data.id, th: this.currentBlock},
+          $set: { t: blockRaw, tid: data.id, th: this.currentBlock },
         })
       );
       this.blocksToken.add(decodedBlockH);
