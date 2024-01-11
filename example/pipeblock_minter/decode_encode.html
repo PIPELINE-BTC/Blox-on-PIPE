@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Base26 Encoder/Decoder</title>
+    <script>
+        const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+        function encodeBase26(num) {
+            if (num === 0) return "A";
+            let result = "";
+            while (num > 0) {
+                const remainder = num % 26;
+                result = alphabet[remainder] + result;
+                num = Math.floor(num / 26);
+            }
+            return result;
+        }
+
+        function decodeBase26(str) {
+            let result = 0;
+            for (let i = 0; i < str.length; i++) {
+                const charIndex = alphabet.indexOf(str[i]);
+                if (charIndex === -1) {
+                    return null;
+                }
+                result = result * 26 + charIndex;
+            }
+            return result;
+        }
+
+        function handleEncode() {
+            const number = parseInt(document.getElementById("numberInput").value);
+            document.getElementById("encodedResult").innerText = "Encoded Result: " + encodeBase26(number);
+        }
+
+        function handleDecode() {
+            const string = document.getElementById("stringInput").value;
+            document.getElementById("decodedResult").innerText = "Decoded Result: " + decodeBase26(string);
+        }
+    </script>
+</head>
+<body>
+    <h2>Base26 Encoder/Decoder</h2>
+    
+    <div>
+        <label for="numberInput">PIPEBLOCK Number to Encode:</label>
+        <input type="number" id="numberInput" />
+        <button onclick="handleEncode()">Encode</button>
+        <p id="encodedResult"></p>
+    </div>
+
+    <div>
+        <label for="stringInput">PIPEBLOCK Number to Decode:</label>
+        <input type="text" id="stringInput" />
+        <button onclick="handleDecode()">Decode</button>
+        <p id="decodedResult"></p>
+    </div>
+</body>
+</html>

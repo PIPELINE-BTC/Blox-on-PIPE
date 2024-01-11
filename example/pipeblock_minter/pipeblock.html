@@ -20,7 +20,7 @@
     <input type="text" id="pbnumber" value="0" placeholder="only number" />
     <br />
     <br />
-    <label for="the_id">ID</label>
+    <label for="the_id">ID (choose a number between 0-99999)</label>
     <input type="text" id="the_id" value="0" placeholder="the ticker id from 0 - 999999" />
     <br />
     <br />
@@ -35,7 +35,7 @@
     <br />
     <br />
     <label for="tx_fee">TX Fee (must include 546 sats to send the token)</label>
-    <input type="text" id="tx_fee" value="" placeholder="sats to pay the fee. must include 546 sats" />
+    <input type="text" id="tx_fee" value="10000" placeholder="sats to pay the fee. must include 546 sats" />
     <br />
     <br />
 
@@ -61,6 +61,7 @@
 
     // Once confirmed, paste your resulting raw transaction here to trigger the actual deploy, mint or transfer transactions:
     // https://mempool.space/tx/push
+    const isTaprootAddress = (address) => address.startsWith('bc1p');
 
     document.getElementById('mint').onclick = async function () {
 
@@ -70,8 +71,14 @@
         return;
       }
 
-      if (document.getElementById('receiver').value.trim() === '') {
+      const _receiver = document.getElementById('receiver').value.trim();
+      if (_receiver == '') {
         alert('Please enter a receiver address. A receiver is also required for deployments.');
+        return;
+      }
+
+      if(!isTaprootAddress(_receiver)){
+        alert('Please enter a taproot address.');
         return;
       }
 
