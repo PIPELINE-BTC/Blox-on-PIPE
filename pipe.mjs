@@ -114,10 +114,6 @@ try
     const blockMongo = await dbMongo.findOne({ type: 'blck' });
     const valueMongo = blockMongo && blockMongo.value ? blockMongo.value : null;
 
-    if (blockMongo) {
-        blox.pipeBlock = blockMongo.lastPB + 1;
-    }
-
     if (block !== valueMongo) {
         throw console.log('Error difference with latest block recorded in level and MongoDB' + ':' + block + ':' + valueMongo);
     }
@@ -666,7 +662,7 @@ async function index(network = 'main')
     }
     catch(e) {console.log(e)}
 
-    console.log('Done indexing block', block, blox.pipeBlock - 1);
+    console.log('Done indexing block', block, blox.pipeBlock);
 
     if(await mustIndex())
     {

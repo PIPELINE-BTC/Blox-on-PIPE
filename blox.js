@@ -87,6 +87,7 @@ var Blox = /** @class */ (function () {
                         });
                         this.blocksToken = new Set(blocksHeight);
                         this.currentBlock = block;
+                        this.pipeBlock = block - this.pipeGenesis;
                         this.blockVSize = BigInt(0);
                         this.blockTxid.clear();
                         this.blockData = [];
@@ -151,9 +152,7 @@ var Blox = /** @class */ (function () {
                     case 3:
                         _a.sent();
                         _a.label = 4;
-                    case 4:
-                        this.pipeBlock += 1;
-                        return [3 /*break*/, 6];
+                    case 4: return [3 /*break*/, 6];
                     case 5:
                         e_2 = _a.sent();
                         console.log(e_2);

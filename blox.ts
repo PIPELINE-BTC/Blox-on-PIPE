@@ -39,6 +39,7 @@ export class Blox {
     this.blocksToken = new Set(blocksHeight);
 
     this.currentBlock = block;
+    this.pipeBlock = block - this.pipeGenesis;
     this.blockVSize = BigInt(0);
     this.blockTxid.clear();
     this.blockData = [];
@@ -81,7 +82,6 @@ export class Blox {
           this.pipeBlocks.insertMany(this.blockData)
         );
       }
-      this.pipeBlock += 1;
     } catch (e) {
       console.log(e);
     }
